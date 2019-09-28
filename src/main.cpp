@@ -1,4 +1,5 @@
 #include "Common.h"
+#include <fstream>
 #include "Trajectory.h"
 #include "Utility/Timer.h"
 
@@ -19,6 +20,7 @@ bool receivedResetRequest = true;
 bool paused = false;
 void PrintHelpText();
 void ProcessConfigCommands(shared_ptr<Visualizer_GLUT> vis);
+float getStandardDeviation(const string& measurementsFileName);
 void LoadScenario(string scenarioFile);
 void ResetSimulation();
 
@@ -43,6 +45,13 @@ string _scenarioFile="../config/01_Intro.txt";
 #include "MavlinkNode/MavlinkNode.h"
 shared_ptr<MavlinkNode> mlNode;
 
+// Scenario 1 constants
+const string SENSORNOISE_PATH = "../config/06_SensorNoise.txt";
+const string GRAPH1_PATH = "../config/log/Graph1.txt";
+const string GRAPH2_PATH = "../config/log/Graph2.txt";
+const string GPS_STANDARD_DEVIATION = "MeasuredStdDev_GPSPosXY";
+const string ACCEL_STANDARD_DEVIATION = "MeasuredStdDev_AccelXY";
+
 int main(int argcp, char **argv)
 {
   PrintHelpText();
@@ -64,6 +73,13 @@ int main(int argcp, char **argv)
     fclose(f);
   }
 
+  if (_scenarioFile.compare(SENSORNOISE_PATH) == 0) {
+    // Read Graph1.txt for GPS X data and set standard deviation
+    getStandardDeviation(GRAPH1_PATH);
+    // Read Graph2.txt for Accel X data and set standard deviation
+    getStandardDeviation(GRAPH2_PATH);
+  }
+
   LoadScenario(_scenarioFile);
  
   glutTimerFunc(1,&OnTimer,0);
@@ -71,6 +87,41 @@ int main(int argcp, char **argv)
   glutMainLoop();
 
   return 0;
+}
+
+void writeConfiguration(const string& configurationFileName, const string& key, const string& value) {
+  std::ofstream configurationFile(configurationFileName);
+
+
+
+  configurationFile.close();
+}
+
+float getStandardDeviation(const string& measurementsFileName) {
+  std::ifstream measurementsFile(measurementsFileName);
+  string line;
+  // Read first line. This contains the column names
+  std::getline(measurementsFile, line);
+  vector<float> measurements;
+  float sum = 0.0, variance = 0.0, stdDeviation = 0.0;
+  int count = 0;
+  // Read the measurements
+  while (std::getline(measurementsFile, line)) {
+    float measurement = std::stof(SLR::RightOf(line, ','));
+    measurements.push_back(measurement);
+    sum += measurement;
+    count++;
+  }
+  float mean = sum / count;
+  printf("Mean : %f\n", mean);
+  for (int i = 0 ; i < count ; i++) {
+    variance += pow(measurements.at(i) - mean, 2);
+  }
+  variance = variance / count;
+  stdDeviation = sqrt(variance);
+  printf("Standard Deviation : %f\n", stdDeviation);
+  measurementsFile.close();
+  return stdDeviation;
 }
 
 void LoadScenario(string scenarioFile)
@@ -106,8 +157,6 @@ void LoadScenario(string scenarioFile)
   { 
     mlNode.reset(new MavlinkNode());
   }
-
-  
 }
 
 int _simCount = 0;
@@ -140,7 +189,7 @@ void ResetSimulation()
     grapher->RegisterDataSource(*i);
     grapher->RegisterDataSources((*i)->sensors);
     grapher->RegisterDataSource((*i)->estimator);
-		grapher->RegisterDataSource((*i)->controller);
+    grapher->RegisterDataSource((*i)->controller);
   }
 }
 
