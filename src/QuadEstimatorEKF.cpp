@@ -94,7 +94,7 @@ void QuadEstimatorEKF::UpdateFromIMU(V3F accel, V3F gyro)
   // make sure you comment it out when you add your own code -- otherwise e.g. you might integrate yaw twice
 
   // Create a Quaternion from the current Roll, Pitch and Yaw
-  Quaternion<float> qt = SLR::Quaternion<float>::FromEuler123_RPY(rollEst, pitchEst, ekfState(6));
+  Quaternion<float> qt = Quaternion<float>::FromEuler123_RPY(rollEst, pitchEst, ekfState(6));
   // Creat a Quaternion dq from the measurement of the angular rates from IMU in the body frame
   Quaternion<float> qtBar = qt.IntegrateBodyRate(gyro, dtIMU);
 
@@ -163,10 +163,53 @@ VectorXf QuadEstimatorEKF::PredictState(VectorXf curState, float dt, V3F accel, 
   //   attitude.Rotate_BtoI(<V3F>) to rotate a vector from body frame to inertial frame
   // - the yaw integral is already done in the IMU update. Be sure not to integrate it again here
 
-  Quaternion<float> attitude = Quaternion<float>::FromEuler123_RPY(rollEst, pitchEst, curState(6));
+  // Quaternion<float> attitude = Quaternion<float>::FromEuler123_RPY(rollEst, pitchEst, curState(6));
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  VectorXf a(7);
 
+  a(0) = predictedState(0) + predictedState(3) * dt;
+  a(1) = predictedState(1) + predictedState(4) * dt;
+  a(2) = predictedState(2) + predictedState(5) * dt;
+  a(3) = predictedState(3);
+  a(4) = predictedState(4);
+  a(5) = predictedState(5) - CONST_GRAVITY * dt,
+  a(6) = predictedState(6);
+
+  MatrixXf b(7, 4);
+  b.setZero();
+
+  float phi = rollEst;
+  float theta = pitchEst;
+  float psi = curState(6);
+
+  // Assign first row of Rbg
+  b(3, 0) = cos(theta) * cos(psi);
+  b(3, 1) = sin(phi) * sin(theta) * cos(psi) - cos(phi) * sin(psi);
+  b(3, 2) = cos(phi) * sin(theta) * cos(psi) + sin(phi) * sin(psi);
+  // Assign second row of Rbg
+  b(4, 0) = cos(theta) * sin(psi);
+  b(4, 1) = sin(phi) * sin(theta) * sin(psi) + cos(phi) * cos(psi);
+  b(4, 2) = cos(phi) * sin(theta) * sin(psi) - sin(phi) * cos(psi);
+  // Assign third row of Rbg
+  b(5, 0) = - sin(theta);
+  b(5, 1) = cos(theta) * sin(phi);
+  b(5, 2) = cos(theta) * cos(phi);
+
+  b(6, 3) = 1.0;
+
+  // Define the control input vector
+  VectorXf ut(4);
+  ut.setZero();
+  ut(0) = accel.x;
+  ut(1) = accel.y;
+  ut(2) = accel.z;
+  ut(3) = 0.0;
+
+  ut = ut * dt;
+
+  // Compute predicted state
+  predictedState = a + b * ut;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -193,8 +236,18 @@ MatrixXf QuadEstimatorEKF::GetRbgPrime(float roll, float pitch, float yaw)
   //   that your calculations are reasonable
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-
-
+  // Row 1
+  RbgPrime(0, 0) = - cos(pitch) * sin(yaw);
+  RbgPrime(0, 1) = - sin(roll) * sin(pitch) * sin(yaw) - cos(roll) * cos(yaw);
+  RbgPrime(0, 2) = - cos(roll) * sin(pitch) * sin(yaw) + sin(roll) * cos(yaw);
+  // Row 2
+  RbgPrime(1, 0) = cos(pitch) * cos(yaw);
+  RbgPrime(1, 1) = sin(roll) * sin(pitch) * cos(yaw) - cos(roll) * sin(yaw);
+  RbgPrime(1, 2) = cos(roll) * sin(pitch) * cos(yaw) + sin(roll) * sin(yaw);
+  // Row 1
+  RbgPrime(2, 0) = 0.0;
+  RbgPrime(2, 1) = 0.0;
+  RbgPrime(2, 2) = 0.0;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return RbgPrime;
@@ -239,7 +292,26 @@ void QuadEstimatorEKF::Predict(float dt, V3F accel, V3F gyro)
   gPrime.setIdentity();
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  // Define the control vector in terms of the accelerations in X,Y & Z directions
+  VectorXf ut(3);
+  ut.setZero();
 
+  ut(0) = accel.x;
+  ut(1) = accel.y;
+  ut(2) = accel.z;
+
+  // Set the dt values in gPrime
+  gPrime(0, 3) = dt;
+  gPrime(1, 4) = dt;
+  gPrime(2, 5) = dt;
+
+  ut = ut * dt;
+
+  gPrime(3, 6) = RbgPrime.row(0) * ut;
+  gPrime(4, 6) = RbgPrime.row(1) * ut;
+  gPrime(5, 6) = RbgPrime.row(2) * ut;
+
+  ekfCov = gPrime * ekfCov * gPrime.transpose() + Q;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
