@@ -336,7 +336,16 @@ void QuadEstimatorEKF::UpdateFromGPS(V3F pos, V3F vel)
   //  - The GPS measurement covariance is available in member variable R_GPS
   //  - this is a very simple update
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  for (int i = 0 ; i < 6 ; i++) {
+      hPrime(i, i) = 1.0;
+  }
 
+  zFromX(0) = ekfState(0);
+  zFromX(1) = ekfState(1);
+  zFromX(2) = ekfState(2);
+  zFromX(3) = ekfState(3);
+  zFromX(4) = ekfState(4);
+  zFromX(5) = ekfState(5);
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   Update(z, hPrime, R_GPS, zFromX);
@@ -358,7 +367,16 @@ void QuadEstimatorEKF::UpdateFromMag(float magYaw)
   //  - The magnetomer measurement covariance is available in member variable R_Mag
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  hPrime(6) = 1.0;
+  zFromX(0) = ekfState(6);
 
+  float magnetometerDiff = magYaw - ekfState(6);
+  // Normalize the Yaw
+  if ( magnetometerDiff > F_PI ) {
+    zFromX(0) += 2.f*F_PI;
+  } else if ( magnetometerDiff < -F_PI ) {
+    zFromX(0) -= 2.f*F_PI;
+  }
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   Update(z, hPrime, R_Mag, zFromX);
