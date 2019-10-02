@@ -20,7 +20,7 @@ bool receivedResetRequest = true;
 bool paused = false;
 void PrintHelpText();
 void ProcessConfigCommands(shared_ptr<Visualizer_GLUT> vis);
-float getStandardDeviation(const string& measurementsFileName);
+void printStandardDeviation(const string& measurementsFileName);
 void LoadScenario(string scenarioFile);
 void ResetSimulation();
 
@@ -49,8 +49,6 @@ shared_ptr<MavlinkNode> mlNode;
 const string SENSORNOISE_PATH = "../config/06_SensorNoise.txt";
 const string GRAPH1_PATH = "../config/log/Graph1.txt";
 const string GRAPH2_PATH = "../config/log/Graph2.txt";
-const string GPS_STANDARD_DEVIATION = "MeasuredStdDev_GPSPosXY";
-const string ACCEL_STANDARD_DEVIATION = "MeasuredStdDev_AccelXY";
 
 int main(int argcp, char **argv)
 {
@@ -75,9 +73,9 @@ int main(int argcp, char **argv)
 
   if (_scenarioFile.compare(SENSORNOISE_PATH) == 0) {
     // Read Graph1.txt for GPS X data and set standard deviation
-    getStandardDeviation(GRAPH1_PATH);
+    printStandardDeviation(GRAPH1_PATH);
     // Read Graph2.txt for Accel X data and set standard deviation
-    getStandardDeviation(GRAPH2_PATH);
+    printStandardDeviation(GRAPH2_PATH);
   }
 
   LoadScenario(_scenarioFile);
@@ -97,7 +95,7 @@ void writeConfiguration(const string& configurationFileName, const string& key, 
   configurationFile.close();
 }
 
-float getStandardDeviation(const string& measurementsFileName) {
+void printStandardDeviation(const string& measurementsFileName) {
   std::ifstream measurementsFile(measurementsFileName);
   string line;
   // Read first line. This contains the column names
@@ -121,7 +119,6 @@ float getStandardDeviation(const string& measurementsFileName) {
   stdDeviation = sqrt(variance);
   printf("Standard Deviation : %f\n", stdDeviation);
   measurementsFile.close();
-  return stdDeviation;
 }
 
 void LoadScenario(string scenarioFile)
