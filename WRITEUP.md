@@ -5,8 +5,8 @@ In this estimation project, we develop the estimation portion of the controller 
 This README is broken down into the following sections:
 
  - [Setup](#setup) - the environment and code setup required to get started and a brief overview of the project structure
- - [The Solutions to the tasks](#the-tasks) - the tasks you will need to complete for the project
- - [Submission](#submission) - overview of the requirements for your project submission
+ - [The Solutions to the tasks](#the-tasks-solutions) - the tasks you will need to complete for the project
+ - [References](#references) - The reference documents used for completing the project.
 
 ## Setup ##
 
@@ -21,8 +21,11 @@ This project will continue to use the C++ development environment set up in the 
  
  3. Compile and run the estimation simulator just as in the controls project
 
+## Note
 
-## The Tasks ##
+All the videos and results of scenarios 1 to 6 are taken with the custom controller from the controls project.
+The good news is that all scenarios from 6 to 11 pass using my [custom controller](https://github.com/anupamberi/FCND-Controls-CPP/blob/master/src/QuadControl.cpp)
+## The Tasks Solutions ##
 
 Here is the list of tasks and the to do lists. Each of these tasks is followed by a solution after the implementation/tuning.
 Project outline:
@@ -184,7 +187,7 @@ The  [PredictState](./src/QuadEstimatorEKF.cpp#L145-L217) is updated as below,
 
 When we run scenario `08_PredictState` the estimator state tracks the actual state, with only reasonably slow drift, as shown in the figure below:
 
-![Scenario 3](./images/Scenario_8.gif)
+![Scenario 3](./images/scenario_8.gif)
 
 The [GetRbgPrime](./src/QuadEstimatorEKF.cpp#L219-L254) is similarly updated as,
 
